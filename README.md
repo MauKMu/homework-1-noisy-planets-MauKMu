@@ -1,5 +1,20 @@
 # CIS 566 Project 1: Noisy Planets
 
+## Student Info
+
+- Name: Mauricio Mutai
+- PennKey: `mmutai`
+
+## Live Demo
+
+[Click here for the live demo!](https://maukmu.github.io/homework-1-noisy-planets-MauKMu/)
+
+## Techniques Used
+
+- Coding and algorithms
+- *Gambiarras*
+- etc.
+
 ## Objective
 - Continue practicing WebGL and Typescript
 - Experiment with noise functions to procedurally generate the surface of a planet
