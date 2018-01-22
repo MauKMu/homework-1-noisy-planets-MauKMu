@@ -13,15 +13,16 @@ enum ShaderEnum {
     LAMBERT = 1,
     CUSTOM,
     DISKS,
+    PLANET,
 }
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
-  tesselations: 5,
+  tesselations: 6,
   'Load Scene': loadScene, // A function pointer, essentially
   geometryColor: [200, 10, 10],
-  shader: ShaderEnum.CUSTOM,
+  shader: ShaderEnum.PLANET,
   shaderSpeed: 1,
   'Toggle tilting': toggleAnimXZ,
   'Toggle squishing': toggleAnimY,
@@ -34,7 +35,7 @@ let cube: Cube;
 let renderer: OpenGLRenderer;
 
 function loadScene() {
-  icosphere = new Icosphere(vec3.fromValues(-1.5, 0, 0), 1, controls.tesselations);
+  icosphere = new Icosphere(vec3.fromValues(0, 0, 0), 1, controls.tesselations);
   icosphere.create();
   square = new Square(vec3.fromValues(0, 0, 0));
   square.create();
@@ -64,7 +65,7 @@ function main() {
   gui.add(controls, 'tesselations', 0, 8).step(1);
   gui.add(controls, 'Load Scene');
   let colorController = gui.addColor(controls, 'geometryColor');
-  gui.add(controls, 'shader', {"Lame Lambert": ShaderEnum.LAMBERT, "Cool Custom": ShaderEnum.CUSTOM, "Decent Disks": ShaderEnum.DISKS});
+  gui.add(controls, 'shader', {"Lame Lambert": ShaderEnum.LAMBERT, "Cool Custom": ShaderEnum.CUSTOM, "Decent Disks": ShaderEnum.DISKS, "Pesky Planet": ShaderEnum.PLANET});
   let speedController = gui.add(controls, 'shaderSpeed', 0, 10);
   gui.add(controls, 'Toggle tilting');
   gui.add(controls, 'Toggle squishing');
@@ -120,10 +121,16 @@ function main() {
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/disks-frag.glsl')),
   ]);
 
+  const planet = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/planet-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/planet-frag.glsl')),
+  ]);
+
   let shaders: { [id: number]: ShaderProgram; } = {};
   shaders[ShaderEnum.LAMBERT] = lambert;
   shaders[ShaderEnum.CUSTOM] = custom;
   shaders[ShaderEnum.DISKS] = disks;
+  shaders[ShaderEnum.PLANET] = planet;
 
   // This function will be called every frame
   function tick() {
@@ -134,7 +141,7 @@ function main() {
     renderer.render(camera, shaders[controls.shader], [
       icosphere,
       // square,
-      cube,
+      // cube,
     ]);
     stats.end();
 
