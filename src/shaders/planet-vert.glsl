@@ -209,7 +209,7 @@ const float WORLEY_BIG_FLOAT = 1.0e10;
 const float WORLEY_EPSILON = 0.001;
 
 worleyResult getWorley(vec3 pt) {
-    const float gridSize = 2.0;
+    const float gridSize = 0.9;
     vec3 gridOrigin = pt - mod(pt, gridSize);
     worleyResult result;
     result.closest0 = vec3(0.0);
@@ -221,7 +221,8 @@ worleyResult getWorley(vec3 pt) {
             for (float k = -gridSize; k < gridSize + WORLEY_EPSILON; k += gridSize) {
                 vec3 gridPt = gridOrigin + vec3(i, j, k);
                 // compute random point
-                vec3 randPt = gridPt + (random3(gridPt) * 0.5 + vec3(cos(u_Time * 0.0001), sin(u_Time * 0.0001), sin(u_Time * 0.0002)) * 0.25 + 0.25) * gridSize;
+                //vec3 randPt = gridPt + (random3(gridPt) * 0.5 + vec3(cos(u_Time * 0.0001), sin(u_Time * 0.0001), sin(u_Time * 0.0002)) * 0.25 + 0.25) * gridSize;
+                vec3 randPt = gridPt + random3(gridPt) * gridSize;
                 // find distance
                 float dist = distance(randPt, pt);
                 // store if closest
@@ -371,17 +372,21 @@ void main()
     float s = 0.1 + smoothstep(0.0, RADIUS, RADIUS - dist);
     */
     //float erosion = cos(u_Time * 0.001) * 0.5 + 0.5;
-    float erosion = f;// getFBM(worley.closest0 + vec3(1.1, 1.7, 3.1));
+    float xzAngle = cos(atan(vs_Pos.z, vs_Pos.x) + u_Time * 0.001) * 0.5 + 0.5;
+    //float erosion = f;// getFBM(worley.closest0 + vec3(1.1, 1.7, 3.1));
+    float erosion = f * smoothstep(0.33, 1.0, xzAngle);
     t = pow(t, mix(1.0, 3.0, erosion)) * mix(0.8, 1.87, erosion) + mix(0.0, 0.2, erosion);
     t = 0.5 + 1.5 * t;
     //fs_Col.xyz = vec3(t - 1.0);
     //t = pow(t, mix(1.0, 1.44, cos(time * 10.0) * 0.5 + 0.5));
-    vec4 modelposition = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
-    //vec4 modelposition = u_Model * (bldgDisp + vs_Pos);   // Temporarily store the transformed vertex positions for use below
+    vec4 naturePos = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
+    vec4 bldgPos = u_Model * (bldgDisp + vs_Pos);   // Temporarily store the transformed vertex positions for use below
+    vec4 modelposition = mix(bldgPos, naturePos, smoothstep(0.1667, 0.33, xzAngle));
     fs_Pos = modelposition.xyz;
 
-    vec3 localNor = fbmNormal;
+    //vec3 localNor = fbmNormal;
     //vec3 localNor = vs_Nor.xyz;
+    vec3 localNor = mix(worley.normal, fbmNormal, smoothstep(0.1667, 0.33, xzAngle));
     fs_Nor = vec4(invTranspose * localNor, 0);
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 
