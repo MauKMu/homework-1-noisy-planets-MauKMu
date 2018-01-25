@@ -15,6 +15,10 @@
 - *Gambiarras*
 - etc.
 
+## External References
+
+- [IQ's article about "Voronoi Edges"](http://www.iquilezles.org/www/articles/voronoilines/voronoilines.htm)
+
 ## Objective
 - Continue practicing WebGL and Typescript
 - Experiment with noise functions to procedurally generate the surface of a planet
