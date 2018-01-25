@@ -30,7 +30,7 @@ in vec4 vs_Nor;             // The array of vertex normals passed to the shader
 
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
 
-out float fs_Shininess;
+flat out float fs_Shininess;
 out vec3 fs_Pos;
 out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
@@ -283,7 +283,7 @@ vec3 getBldgDisp(vec3 pt, inout worleyResult worley) {
     float s = (dist > streetRadius ? 1.0 : 0.0);
     worley.normal = abs(dist - streetRadius) < (0.05 * streetRadius) ? borderNormal : bldgDir;
     // (bldgHeight - projLen) + bldgHeight
-    float bldgHeight = random3(worley.closest0).x * 0.65 + 0.85;
+    float bldgHeight = random3(worley.closest0).x * 0.35 + 0.65;
     s *= (2.0 * bldgHeight - projLen);
     return s * bldgDir;
 }
@@ -333,11 +333,7 @@ void main()
     worleyResult worleyTime = getWorley(vs_Pos.xyz, 0.9, 1.0);
     vec4 bldgDisp = vec4(getBldgDisp(vs_Pos.xyz, worley), 0.0);
     if (length(bldgDisp) < EPSILON) {
-        fs_Shininess = 25.0;
         worley.normal = vs_Nor.xyz;
-    }
-    else {
-        fs_Shininess = 5.0;
     }
     fs_Col = vec4(getSmoothRandom3(worley.closest0), 1.0);
     float f = getFBM(worleyTime.closest0, 0.15);
@@ -388,7 +384,6 @@ void main()
     //float erosion = cos(u_Time * 0.001) * 0.5 + 0.5;
     float xzAngle = cos(atan(vs_Pos.z, vs_Pos.x) + u_Time * 0.001) * 0.5 + 0.5;
     xzAngle = f;
-    //float erosion = f;// getFBM(worley.closest0 + vec3(1.1, 1.7, 3.1));
     float erosion = f * smoothstep(0.33, 1.0, xzAngle);
     t = pow(t, mix(0.77, 3.0, erosion)) * mix(0.8, 3.27, erosion) + mix(0.0, 0.0, erosion);
     t = 0.5 + 1.5 * t;
@@ -399,10 +394,18 @@ void main()
     vec4 modelposition = mix(bldgPos, naturePos,  smoothstep(0.1667, 0.33, xzAngle));
     fs_Pos = modelposition.xyz;
 
+    const vec3 erodedColor = vec3(124.0, 87.0, 0.0) / 255.0;
+    const vec3 nonErodedColor = vec3(35.0, 94.0, 18.0) / 255.0;
+    vec3 natureCol = mix(erodedColor, nonErodedColor, smoothstep(0.33, 1.0, xzAngle));
+    vec3 bldgCol = vec3(0.8, 0.8, 0.8);
+    fs_Col.xyz = mix(bldgCol, natureCol, smoothstep(0.1667, 0.47, xzAngle));
+
     //vec3 localNor = fbmNormal;
     //vec3 localNor = vs_Nor.xyz;
     vec3 localNor = mix(worley.normal, fbmNormal, smoothstep(0.1667, 0.33, xzAngle));
     fs_Nor = vec4(invTranspose * localNor, 0);
+
+    fs_Shininess = mix(5.0, 50.0, smoothstep(0.29, 0.33, xzAngle));
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 
     gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is

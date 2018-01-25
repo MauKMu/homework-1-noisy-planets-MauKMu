@@ -24,7 +24,7 @@ in vec3 fs_Pos;
 in vec4 fs_Nor;
 in vec4 fs_LightVec;
 in vec4 fs_Col;
-in float fs_Shininess;
+flat in float fs_Shininess;
 
 out vec4 out_Col; // This is the final output color that you will see on your
                   // screen for the pixel that is currently being processed.
@@ -52,12 +52,13 @@ void main()
         // Calculate the diffuse term for Lambert shading
         float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
         // Avoid negative lighting values
-        diffuseTerm = clamp(diffuseTerm, 0.0, 1.0);
+        diffuseTerm = clamp(diffuseTerm, 0.0, 1.0) * 0.7;
 
-        float ambientTerm = 0.2;
+        float ambientTerm = 0.3;
 
         vec3 halfVec = normalize(fs_LightVec.xyz + normalize(u_EyePos - fs_Pos));
         float specularTerm = pow(max(0.0, dot(halfVec, fs_Nor.xyz)), fs_Shininess);
+        specularTerm = fs_Shininess > 5.5 ? 0.0 : (0.0, 0.5, specularTerm);
 
         float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
                                                             //to simulate ambient lighting. This ensures that faces that are not
