@@ -36,7 +36,7 @@ out vec4 fs_Nor;            // The array of normals that has been transformed by
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
 
-const vec4 lightPos = vec4(5, 5, 3, 1); //The position of our virtual light, which is used to compute the shading of
+const vec4 lightPos = vec4(5 + 1, 5, 3, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
 
 
@@ -65,6 +65,35 @@ vec3 random3(vec3 c) {
     r.y = fract(512.0*j);
     return r;
 }
+
+float rand1(float n) { 
+    return fract(sin(n) * 43758.5453123); 
+}
+
+float noise1(float p) {
+    float fl = floor(p);
+    float fc = fract(p);
+    return mix(rand1(fl), rand1(fl + 1.0), fc);
+}
+
+vec3 getSmoothRandom3(vec3 pt) {
+    vec3 noiseSum = vec3(0.0);
+    float amplitudeSum = 0.0;
+    float amplitude = 0.5;
+    float frequency = 1.0;
+    for(int i = 0; i < 8; i++) {
+        vec3 freqPt = frequency * pt;
+        vec3 noise = random3(freqPt);
+        //vec3 noise = vec3(random2(freqPt.xy), 0.0) * 0.5 + 0.5;
+        //vec3 noise = vec3(noise1(pt.x), noise1(pt.y), noise1(pt.z));
+        noiseSum += noise * amplitude;
+        amplitudeSum += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.0;
+    }
+    return noiseSum / amplitudeSum;
+}
+
 /*
 vec3 Gradient(float t)
 {
@@ -106,7 +135,8 @@ float surflet(vec3 P, vec3 gridPoint)
     float tZ = 1.0 - 6.0 * pow(distZ, 5.0) + 15.0 * pow(distZ, 4.0) - 10.0 * pow(distZ, 3.0);
 
     // Get the random vector for the grid point
-    vec3 gradient = vec3(random2(gridPoint.xy), random2(gridPoint.zz).x);
+    vec3 gradient = random3(gridPoint);
+    //vec3 gradient = vec3(random2(gridPoint.xy), random2(gridPoint.zz).x);
     //vec3 gradient = random3(gridPoint);
     // Get the vector from the grid point to P
     vec3 diff = P - gridPoint;
@@ -144,7 +174,7 @@ float PerlinNoise(vec3 v)
 }
 
 float normalizedPerlinNoise(vec3 v) {
-    return PerlinNoise(v) * 0.5 + 0.5;
+    return clamp(0.0, 1.0, PerlinNoise(v) * 0.5 + 0.5);
 }
 
 /*
@@ -179,7 +209,7 @@ const float WORLEY_BIG_FLOAT = 1.0e10;
 const float WORLEY_EPSILON = 0.001;
 
 worleyResult getWorley(vec3 pt) {
-    const float gridSize = 1.0;
+    const float gridSize = 2.0;
     vec3 gridOrigin = pt - mod(pt, gridSize);
     worleyResult result;
     result.closest0 = vec3(0.0);
@@ -191,7 +221,7 @@ worleyResult getWorley(vec3 pt) {
             for (float k = -gridSize; k < gridSize + WORLEY_EPSILON; k += gridSize) {
                 vec3 gridPt = gridOrigin + vec3(i, j, k);
                 // compute random point
-                vec3 randPt = gridPt + random3(gridPt) * gridSize;
+                vec3 randPt = gridPt + (random3(gridPt) * 0.5 + vec3(cos(u_Time * 0.0001), sin(u_Time * 0.0001), sin(u_Time * 0.0002)) * 0.25 + 0.25) * gridSize;
                 // find distance
                 float dist = distance(randPt, pt);
                 // store if closest
@@ -220,28 +250,8 @@ worleyResult getWorley(vec3 pt) {
     return result;
 }
 
-/* Buildings -- no Worley */
-/*
-const vec3 bldgDir = normalize(vec3(-1, 1, 1));
-const float bldgHeight = 0.75;
-const float bldgRadius = 0.2;
-
-float getBldgHeight(vec3 pt) {
-    float dist = distance(pt, bldgDir);
-    float projLen = dot(bldgDir, pt);
-    // determines whether we are "on" the building
-    float s = (smoothstep(0.0, bldgRadius, bldgRadius - dist) > 0.001 ? 1.0 : 0.0);
-    // (bldgHeight - projLen) + bldgHeight
-    return s * (2.0 * bldgHeight - projLen);
-}
-
-vec3 getBldgDisp(vec3 pt) {
-    return getBldgHeight(pt) * bldgDir;
-}
-*/
 
 /* Buildings -- with Worley */
-// TODO!!!!
 const float streetRadius = 0.1;
 
 vec3 getBldgDisp(vec3 pt, inout worleyResult worley) {
@@ -257,11 +267,42 @@ vec3 getBldgDisp(vec3 pt, inout worleyResult worley) {
     float projLen = dot(bldgDir, pt);
     // determines whether we are "on" the building
     float s = (dist > streetRadius ? 1.0 : 0.0);
-    worley.normal = abs(dist - streetRadius) < 0.005 ? borderNormal : bldgDir;
+    worley.normal = abs(dist - streetRadius) < (0.05 * streetRadius) ? borderNormal : bldgDir;
     // (bldgHeight - projLen) + bldgHeight
     float bldgHeight = random3(worley.closest0).x * 0.75 + 0.75;
     s *= (2.0 * bldgHeight - projLen);
     return s * bldgDir;
+}
+
+/* Recursive Perlin Noise */
+float getRecursivePerlin(vec3 pt, float freq) {
+    vec3 gridPt = sphereToGrid(pt, 6.0 * freq);
+    // we recursive now boys
+    float t0 = normalizedPerlinNoise(gridPt);
+    return normalizedPerlinNoise(gridPt + sphereToGrid(vec3(t0) * 2.0 - vec3(1.0), 4.0 * freq));
+}
+
+/* FBM (uses Recursive Perlin) */
+float getFBM(vec3 pt) {
+    float noiseSum = 0.0;
+    float amplitudeSum = 0.0;
+    float amplitude = 0.5;
+    float frequency = 1.0;
+    for(int i = 0; i < 5; i++) {
+        float perlin = getRecursivePerlin(pt, frequency * 0.5);
+        //uv = vec2(cos(3.14159/3.0 * i) * uv.x - sin(3.14159/3.0 * i) * uv.y, sin(3.14159/3.0 * i) * uv.x + cos(3.14159/3.0 * i) * uv.y);
+        noiseSum += perlin * amplitude;
+        amplitudeSum += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.0;
+    }
+    return noiseSum / amplitudeSum;
+    /*
+    float rawFBM = noiseSum / amplitudeSum;
+    float t = cos(u_Time * 0.001);
+    bool eroded = t > 0.0;
+    return pow(rawFBM, eroded ? 1.0 : 3.0) * (eroded ? 0.8 : 1.87) + (eroded ? 0.0 : 0.2);
+    */
 }
 
 void main()
@@ -283,29 +324,14 @@ void main()
     else {
         fs_Shininess = 5.0;
     }
-    fs_Col = vec4(random3(worley.closest0), 1.0);
+    fs_Col = vec4(getSmoothRandom3(worley.closest0), 1.0);
+    fs_Col = vec4(vec3(getFBM(worley.closest0)), 1.0);
     if (distance(normalize(vs_Pos.xyz), worley.normClosest0) < 0.04) {
         fs_Col.xyz = vec3(1.0) - fs_Col.xyz;
     }
-    /*
-    vec4 bldgDisp = vec4(getBldgDisp(vs_Pos.xyz), 0.0);
-    float bdXL = getBldgHeight(normalize(vs_Pos.xyz + vec3(-BLDG_EPSILON, 0.0, 0.0)));
-    float bdXH = getBldgHeight(normalize(vs_Pos.xyz + vec3(+BLDG_EPSILON, 0.0, 0.0)));
-    float bdYL = getBldgHeight(normalize(vs_Pos.xyz + vec3(0.0, -BLDG_EPSILON, 0.0)));
-    float bdYH = getBldgHeight(normalize(vs_Pos.xyz + vec3(0.0, +BLDG_EPSILON, 0.0)));
-    float bdZL = getBldgHeight(normalize(vs_Pos.xyz + vec3(0.0, 0.0, -BLDG_EPSILON)));
-    float bdZH = getBldgHeight(normalize(vs_Pos.xyz + vec3(0.0, 0.0, +BLDG_EPSILON)));
-    // attempt at computing building normal
-    vec3 bldgGradient = vec3(bdXL - bdXH, bdYL - bdYH, bdZL - bdZH);
-    //vec3 bldgNormal = length(bldgGradient) >= EPSILON ? normalize(bldgGradient) :
-    //                  length(bldgDisp) >= EPSILON ? bldgDir : vec3(vs_Nor);
-    // maybe do normals when have Worley noise
-    vec3 bldgNormal = length(bldgDisp) >= EPSILON ? bldgDir :
-                      length(bldgGradient) >= EPSILON ? normalize(bldgGradient) : vec3(vs_Nor);
-                      */
+    //fs_Col.xyz = getSmoothRandom3(vs_Pos.xyz);
 
-    //fs_Nor = vec4(invTranspose * vec3(vs_Nor), 0);
-    fs_Nor = vec4(invTranspose * vec3(worley.normal), 0);
+    //fs_Nor = vec4(invTranspose * vec3(worley.normal), 0);
    // fs_Nor = vec4(invTranspose * bldgNormal, 0.0);          // Pass the vertex normals to the fragment shader for interpolation.
                                                             // Transform the geometry's normals by the inverse transpose of the
                                                             // model matrix. This is necessary to ensure the normals remain
@@ -323,26 +349,34 @@ void main()
 
     vec4 modelposition = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
     */
-    vec3 gridPt = sphereToGrid(vs_Pos.xyz, 4.0);
-    // we recursive now boys
-    float t0 = normalizedPerlinNoise(gridPt);
-    //float t1 = normalizedPerlinNoise(gridPt + vec3(2.5252, 1.08, 5.66));
-    //float t2 = normalizedPerlinNoise(gridPt * vec3(5.13, 2.1, 3.33));
-    float t = normalizedPerlinNoise(gridPt + sphereToGrid(vec3(t0) * 2.0 - vec3(1.0), 4.0));
+    float t = getFBM(vs_Pos.xyz);
+    // estimate normal
+    const float GRADIENT_EPSILON = 0.05;
+    float fbmXL = getFBM(vs_Pos.xyz - vec3(GRADIENT_EPSILON, 0.0, 0.0));
+    float fbmXH = getFBM(vs_Pos.xyz + vec3(GRADIENT_EPSILON, 0.0, 0.0));
+    float fbmYL = getFBM(vs_Pos.xyz - vec3(0.0, GRADIENT_EPSILON, 0.0));
+    float fbmYH = getFBM(vs_Pos.xyz + vec3(0.0, GRADIENT_EPSILON, 0.0));
+    float fbmZL = getFBM(vs_Pos.xyz - vec3(0.0, 0.0, GRADIENT_EPSILON));
+    float fbmZH = getFBM(vs_Pos.xyz + vec3(0.0, 0.0, GRADIENT_EPSILON));
+    vec3 fbmNormal = normalize(vec3(fbmXL - fbmXH, fbmYL - fbmYH, fbmZL - fbmZH));
     //float t = normalizedPerlinNoise(vec3(t0, t1, t2));
     /*
     float dist = distance(normalize(vs_Pos.xyz), bldgDir);
     const float RADIUS = 0.75;
     float s = 0.1 + smoothstep(0.0, RADIUS, RADIUS - dist);
     */
-    float s = 1.0;
-    t = 1.0 + s * clamp(0.2, 0.8, t);
+    float erosion = cos(u_Time * 0.001) * 0.5 + 0.5;
+    t = pow(t, mix(1.0, 3.0, erosion)) * mix(0.8, 1.87, erosion) + mix(0.0, 0.2, erosion);
+    t = 0.5 + 1.5 * t;
     //fs_Col.xyz = vec3(t - 1.0);
-    t = pow(t, mix(1.0, 1.44, cos(time * 10.0) * 0.5 + 0.5));
-    //vec4 modelposition = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
-    vec4 modelposition = u_Model * (bldgDisp + vs_Pos);   // Temporarily store the transformed vertex positions for use below
+    //t = pow(t, mix(1.0, 1.44, cos(time * 10.0) * 0.5 + 0.5));
+    vec4 modelposition = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
+    //vec4 modelposition = u_Model * (bldgDisp + vs_Pos);   // Temporarily store the transformed vertex positions for use below
     fs_Pos = modelposition.xyz;
 
+    vec3 localNor = fbmNormal;
+    //vec3 localNor = vs_Nor.xyz;
+    fs_Nor = vec4(invTranspose * localNor, 0);
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 
     gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is

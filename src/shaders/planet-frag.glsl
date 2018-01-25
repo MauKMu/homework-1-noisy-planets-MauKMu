@@ -32,6 +32,7 @@ out vec4 out_Col; // This is the final output color that you will see on your
 void main()
 {
         out_Col = fs_Col;
+        return;
         // Material base color (before shading)
         // IQ's iridescent palette...
         vec3 bias = abs(fs_Nor.xyz);
@@ -46,6 +47,7 @@ void main()
         vec4 altColor = baseColor.yzxw;
         vec4 diffuseColor = mix(baseColor, altColor, tShift);
         diffuseColor.xyz = vec3(0.89);
+        diffuseColor.xyz = fs_Col.xyz;
 
         // Calculate the diffuse term for Lambert shading
         float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
