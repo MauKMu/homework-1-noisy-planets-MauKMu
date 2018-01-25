@@ -32,7 +32,7 @@ out vec4 out_Col; // This is the final output color that you will see on your
 void main()
 {
         out_Col = fs_Col;
-        return;
+        //return;
         // Material base color (before shading)
         // IQ's iridescent palette...
         vec3 bias = abs(fs_Nor.xyz);

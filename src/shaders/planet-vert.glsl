@@ -283,13 +283,13 @@ float getRecursivePerlin(vec3 pt, float freq) {
 }
 
 /* FBM (uses Recursive Perlin) */
-float getFBM(vec3 pt) {
+float getFBM(vec3 pt, float startFreq) {
     float noiseSum = 0.0;
     float amplitudeSum = 0.0;
     float amplitude = 0.5;
-    float frequency = 1.0;
+    float frequency = startFreq;
     for(int i = 0; i < 5; i++) {
-        float perlin = getRecursivePerlin(pt, frequency * 0.5);
+        float perlin = getRecursivePerlin(pt, frequency);
         //uv = vec2(cos(3.14159/3.0 * i) * uv.x - sin(3.14159/3.0 * i) * uv.y, sin(3.14159/3.0 * i) * uv.x + cos(3.14159/3.0 * i) * uv.y);
         noiseSum += perlin * amplitude;
         amplitudeSum += amplitude;
@@ -325,7 +325,12 @@ void main()
         fs_Shininess = 5.0;
     }
     fs_Col = vec4(getSmoothRandom3(worley.closest0), 1.0);
-    fs_Col = vec4(vec3(getFBM(worley.closest0)), 1.0);
+    float f = getFBM(worley.closest0, 0.15);
+    f = smoothstep(0.35, 0.7, f);
+    //f = pow(f, 3.0) * 1.5;
+    //f = f > 0.3 ? (f * 1.5) : f;
+    //f = clamp(0.25, 0.75, f) * 2.0 - 0.5;
+    fs_Col = vec4(f, 0.33, 0.33, 1.0);
     if (distance(normalize(vs_Pos.xyz), worley.normClosest0) < 0.04) {
         fs_Col.xyz = vec3(1.0) - fs_Col.xyz;
     }
@@ -349,15 +354,15 @@ void main()
 
     vec4 modelposition = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
     */
-    float t = getFBM(vs_Pos.xyz);
+    float t = getFBM(vs_Pos.xyz, 0.5);
     // estimate normal
     const float GRADIENT_EPSILON = 0.05;
-    float fbmXL = getFBM(vs_Pos.xyz - vec3(GRADIENT_EPSILON, 0.0, 0.0));
-    float fbmXH = getFBM(vs_Pos.xyz + vec3(GRADIENT_EPSILON, 0.0, 0.0));
-    float fbmYL = getFBM(vs_Pos.xyz - vec3(0.0, GRADIENT_EPSILON, 0.0));
-    float fbmYH = getFBM(vs_Pos.xyz + vec3(0.0, GRADIENT_EPSILON, 0.0));
-    float fbmZL = getFBM(vs_Pos.xyz - vec3(0.0, 0.0, GRADIENT_EPSILON));
-    float fbmZH = getFBM(vs_Pos.xyz + vec3(0.0, 0.0, GRADIENT_EPSILON));
+    float fbmXL = getFBM(vs_Pos.xyz - vec3(GRADIENT_EPSILON, 0.0, 0.0), 0.5);
+    float fbmXH = getFBM(vs_Pos.xyz + vec3(GRADIENT_EPSILON, 0.0, 0.0), 0.5);
+    float fbmYL = getFBM(vs_Pos.xyz - vec3(0.0, GRADIENT_EPSILON, 0.0), 0.5);
+    float fbmYH = getFBM(vs_Pos.xyz + vec3(0.0, GRADIENT_EPSILON, 0.0), 0.5);
+    float fbmZL = getFBM(vs_Pos.xyz - vec3(0.0, 0.0, GRADIENT_EPSILON), 0.5);
+    float fbmZH = getFBM(vs_Pos.xyz + vec3(0.0, 0.0, GRADIENT_EPSILON), 0.5);
     vec3 fbmNormal = normalize(vec3(fbmXL - fbmXH, fbmYL - fbmYH, fbmZL - fbmZH));
     //float t = normalizedPerlinNoise(vec3(t0, t1, t2));
     /*
@@ -365,7 +370,8 @@ void main()
     const float RADIUS = 0.75;
     float s = 0.1 + smoothstep(0.0, RADIUS, RADIUS - dist);
     */
-    float erosion = cos(u_Time * 0.001) * 0.5 + 0.5;
+    //float erosion = cos(u_Time * 0.001) * 0.5 + 0.5;
+    float erosion = f;// getFBM(worley.closest0 + vec3(1.1, 1.7, 3.1));
     t = pow(t, mix(1.0, 3.0, erosion)) * mix(0.8, 1.87, erosion) + mix(0.0, 0.2, erosion);
     t = 0.5 + 1.5 * t;
     //fs_Col.xyz = vec3(t - 1.0);
