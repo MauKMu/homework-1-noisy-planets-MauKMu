@@ -30,6 +30,8 @@ in vec4 vs_Nor;             // The array of vertex normals passed to the shader
 
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
 
+out float fs_Shininess;
+out vec3 fs_Pos;
 out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
@@ -174,21 +176,22 @@ struct worleyResult {
 };
 
 const float WORLEY_BIG_FLOAT = 1.0e10;
+const float WORLEY_EPSILON = 0.001;
 
 worleyResult getWorley(vec3 pt) {
     const float gridSize = 1.0;
-    vec3 gridOrigin = floor(pt);
+    vec3 gridOrigin = pt - mod(pt, gridSize);
     worleyResult result;
     result.closest0 = vec3(0.0);
     result.closest1 = vec3(0.0);
     result.closestDist0 = WORLEY_BIG_FLOAT;
     result.closestDist1 = WORLEY_BIG_FLOAT;
-    for (float i = -1.0; i < 1.1; i += 1.0) {
-        for (float j = -1.0; j < 1.1; j += 1.0) {
-            for (float k = -1.0; k < 1.1; k += 1.0) {
+    for (float i = -gridSize; i < gridSize + WORLEY_EPSILON; i += gridSize) {
+        for (float j = -gridSize; j < gridSize + WORLEY_EPSILON; j += gridSize) {
+            for (float k = -gridSize; k < gridSize + WORLEY_EPSILON; k += gridSize) {
                 vec3 gridPt = gridOrigin + vec3(i, j, k);
                 // compute random point
-                vec3 randPt = gridPt + random3(gridPt);
+                vec3 randPt = gridPt + random3(gridPt) * gridSize;
                 // find distance
                 float dist = distance(randPt, pt);
                 // store if closest
@@ -273,6 +276,13 @@ void main()
     float time = u_Speed * u_Time * 0.0001;
     worleyResult worley = getWorley(vs_Pos.xyz);
     vec4 bldgDisp = vec4(getBldgDisp(vs_Pos.xyz, worley), 0.0);
+    if (length(bldgDisp) < EPSILON) {
+        fs_Shininess = 25.0;
+        worley.normal = vs_Nor.xyz;
+    }
+    else {
+        fs_Shininess = 5.0;
+    }
     fs_Col = vec4(random3(worley.closest0), 1.0);
     if (distance(normalize(vs_Pos.xyz), worley.normClosest0) < 0.04) {
         fs_Col.xyz = vec3(1.0) - fs_Col.xyz;
@@ -331,6 +341,7 @@ void main()
     t = pow(t, mix(1.0, 1.44, cos(time * 10.0) * 0.5 + 0.5));
     //vec4 modelposition = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
     vec4 modelposition = u_Model * (bldgDisp + vs_Pos);   // Temporarily store the transformed vertex positions for use below
+    fs_Pos = modelposition.xyz;
 
     fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
 

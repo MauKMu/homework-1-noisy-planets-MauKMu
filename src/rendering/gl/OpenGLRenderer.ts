@@ -79,6 +79,7 @@ class OpenGLRenderer {
     mat4.multiply(viewProj, camera.projectionMatrix, camera.viewMatrix);
     prog.setModelMatrix(model);
     prog.setViewProjMatrix(viewProj);
+    prog.setEyePos(camera.position);
     prog.setGeometryColor(this.geometryColor);
     let now = Date.now();
     prog.setTime(now - this.startTime);

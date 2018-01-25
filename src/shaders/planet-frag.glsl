@@ -16,11 +16,15 @@ uniform vec4 u_Color; // The color with which to render this instance of geometr
 uniform float u_Time;
 uniform float u_Speed;
 
+uniform vec3 u_EyePos;
+
 // These are the interpolated values out of the rasterizer, so you can't know
 // their specific values without knowing the vertices that contributed to them
+in vec3 fs_Pos;
 in vec4 fs_Nor;
 in vec4 fs_LightVec;
 in vec4 fs_Col;
+in float fs_Shininess;
 
 out vec4 out_Col; // This is the final output color that you will see on your
                   // screen for the pixel that is currently being processed.
@@ -50,10 +54,14 @@ void main()
 
         float ambientTerm = 0.2;
 
+        vec3 halfVec = normalize(fs_LightVec.xyz + normalize(u_EyePos - fs_Pos));
+        float specularTerm = pow(max(0.0, dot(halfVec, fs_Nor.xyz)), fs_Shininess);
+
         float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
                                                             //to simulate ambient lighting. This ensures that faces that are not
                                                             //lit by our point light are not completely black.
 
         // Compute final shaded color
         out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
+        out_Col.xyz += vec3(specularTerm);
 }
