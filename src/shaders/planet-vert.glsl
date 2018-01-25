@@ -208,9 +208,16 @@ struct worleyResult {
 const float WORLEY_BIG_FLOAT = 1.0e10;
 const float WORLEY_EPSILON = 0.001;
 
-worleyResult getWorley(vec3 pt) {
-    const float gridSize = 0.9;
-    vec3 gridOrigin = pt - mod(pt, gridSize);
+worleyResult getWorley(vec3 pt, float gridSize, float timeFactor) {
+    vec3 gridOrigin;
+    if (gridSize >= 1.0) {
+        gridOrigin.x = pt.x > 0.0 ? 0.0 : -gridSize;
+        gridOrigin.y = pt.y > 0.0 ? 0.0 : -gridSize;
+        gridOrigin.z = pt.z > 0.0 ? 0.0 : -gridSize;
+    }
+    else {
+        gridOrigin = pt - mod(pt, gridSize);
+    }
     worleyResult result;
     result.closest0 = vec3(0.0);
     result.closest1 = vec3(0.0);
@@ -222,7 +229,13 @@ worleyResult getWorley(vec3 pt) {
                 vec3 gridPt = gridOrigin + vec3(i, j, k);
                 // compute random point
                 //vec3 randPt = gridPt + (random3(gridPt) * 0.5 + vec3(cos(u_Time * 0.0001), sin(u_Time * 0.0001), sin(u_Time * 0.0002)) * 0.25 + 0.25) * gridSize;
-                vec3 randPt = gridPt + random3(gridPt) * gridSize;
+                vec3 randPt;
+                if (timeFactor < 0.0) {
+                    randPt = gridPt + random3(gridPt) * gridSize;
+                }
+                else {
+                    randPt = gridPt + (random3(gridPt) * 0.5 + vec3(cos(u_Time * 0.0001), sin(u_Time * 0.0001), sin(u_Time * 0.0002)) * 0.25 + 0.25) * gridSize;
+                }
                 // find distance
                 float dist = distance(randPt, pt);
                 // store if closest
@@ -253,7 +266,7 @@ worleyResult getWorley(vec3 pt) {
 
 
 /* Buildings -- with Worley */
-const float streetRadius = 0.1;
+const float streetRadius = 0.12;
 
 vec3 getBldgDisp(vec3 pt, inout worleyResult worley) {
     vec3 bldgDir = worley.normClosest0;
@@ -270,7 +283,7 @@ vec3 getBldgDisp(vec3 pt, inout worleyResult worley) {
     float s = (dist > streetRadius ? 1.0 : 0.0);
     worley.normal = abs(dist - streetRadius) < (0.05 * streetRadius) ? borderNormal : bldgDir;
     // (bldgHeight - projLen) + bldgHeight
-    float bldgHeight = random3(worley.closest0).x * 0.75 + 0.75;
+    float bldgHeight = random3(worley.closest0).x * 0.65 + 0.85;
     s *= (2.0 * bldgHeight - projLen);
     return s * bldgDir;
 }
@@ -316,7 +329,8 @@ void main()
     const float EPSILON = 0.001;
     const float BLDG_EPSILON = 0.1;
     float time = u_Speed * u_Time * 0.0001;
-    worleyResult worley = getWorley(vs_Pos.xyz);
+    worleyResult worley = getWorley(vs_Pos.xyz, 0.65, -1.0);
+    worleyResult worleyTime = getWorley(vs_Pos.xyz, 0.9, 1.0);
     vec4 bldgDisp = vec4(getBldgDisp(vs_Pos.xyz, worley), 0.0);
     if (length(bldgDisp) < EPSILON) {
         fs_Shininess = 25.0;
@@ -326,13 +340,13 @@ void main()
         fs_Shininess = 5.0;
     }
     fs_Col = vec4(getSmoothRandom3(worley.closest0), 1.0);
-    float f = getFBM(worley.closest0, 0.15);
-    f = smoothstep(0.35, 0.7, f);
+    float f = getFBM(worleyTime.closest0, 0.15);
+    f = smoothstep(0.35, 0.6, f);
     //f = pow(f, 3.0) * 1.5;
     //f = f > 0.3 ? (f * 1.5) : f;
     //f = clamp(0.25, 0.75, f) * 2.0 - 0.5;
     fs_Col = vec4(f, 0.33, 0.33, 1.0);
-    if (distance(normalize(vs_Pos.xyz), worley.normClosest0) < 0.04) {
+    if (distance(normalize(vs_Pos.xyz), worleyTime.normClosest0) < 0.04) {
         fs_Col.xyz = vec3(1.0) - fs_Col.xyz;
     }
     //fs_Col.xyz = getSmoothRandom3(vs_Pos.xyz);
@@ -373,6 +387,7 @@ void main()
     */
     //float erosion = cos(u_Time * 0.001) * 0.5 + 0.5;
     float xzAngle = cos(atan(vs_Pos.z, vs_Pos.x) + u_Time * 0.001) * 0.5 + 0.5;
+    xzAngle = f;
     //float erosion = f;// getFBM(worley.closest0 + vec3(1.1, 1.7, 3.1));
     float erosion = f * smoothstep(0.33, 1.0, xzAngle);
     t = pow(t, mix(1.0, 3.0, erosion)) * mix(0.8, 1.87, erosion) + mix(0.0, 0.2, erosion);
