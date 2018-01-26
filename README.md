@@ -66,7 +66,7 @@
 ## Bonus Shaders
 
 - Both of these essentially replace the lava biome with a new biome.
-  - "Urban Planet": As mentioned above, a partial implementation of my idea of having an urban biome. Buildings are white and shiny, and have (mostly) straight wall. They look smoother with higher tessellation levels.
+  - "Urban Planet": As mentioned above, a partial implementation of my idea of having an urban biome. Buildings are white and shiny, and have (mostly) straight walls. They look smoother with higher tessellation levels.
   - "Magic Plumous Planet": While debugging, I tried coloring the lava with its normals, and though the result looked very interesting. Instead of lava pools, I like to think it's some sort of magic potion reservoir that would do weird things if you fell in it (not unlike Banjo-Tooie's transformation mechanic).
 
 
