@@ -7,10 +7,17 @@
 
 ## Live Demo
 
-[Click here for the live demo!](https://maukmu.github.io/homework-1-noisy-planets-MauKMu/)
+- Click here for the live demo!
+
+[![](img/lava.gif)](https://maukmu.github.io/homework-1-noisy-planets-MauKMu/)
 
 ## Techniques Used
 
+### General Planet Behavior
+
+- I was inspired by the idea of using **Worley noise** to split my planet into different "biomes". I believe this idea was mentioned in class, and I also remember discussing it in CIS460 last semester.
+- However, instead of traditional biomes (e.g. Minecraft), I wanted to do something slightly different. My initial idea was to have an "urban biomes", where buildings would appear of instead of natural geographic features.
+  - I had some difficulty of making these buildings look like real buildings. Eventually, a TA suggested that I should scrap the idea and work on another biome. The partial implementation of this is available under the "Urban Planet" shader.
 - Coding and algorithms
 - *Gambiarras*
 - etc.
