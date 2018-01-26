@@ -30,7 +30,8 @@ in vec4 vs_Nor;             // The array of vertex normals passed to the shader
 
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
 
-flat out float fs_Shininess;
+ out float fs_Shininess;
+flat out vec3 fs_FlatPos;
 out vec3 fs_Pos;
 out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
@@ -423,12 +424,14 @@ void main()
     vec4 modelposition = mix(bldgPos, naturePos,  smoothstep(0.1667, 0.33, xzAngle));
     //modelposition = bldgPos;
     fs_Pos = modelposition.xyz;
+    fs_FlatPos = modelposition.xyz;
 
     const vec3 erodedColor = vec3(124.0, 87.0, 0.0) / 255.0;
     const vec3 nonErodedColor = vec3(35.0, 94.0, 18.0) / 255.0;
     vec3 natureCol = mix(erodedColor, nonErodedColor, smoothstep(0.33, 1.0, xzAngle));
     vec3 bldgCol = vec3(0.8, 0.8, 0.8);
     bldgCol = getLavaDisp(vs_Pos.xyz, worley);
+    bldgCol = natureCol;
     fs_Col.xyz = mix(bldgCol, natureCol, smoothstep(0.29, 0.309, xzAngle));
 
     vec3 localNor = fbmNormal;

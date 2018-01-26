@@ -18,6 +18,15 @@ uniform float u_Speed;
 
 uniform vec3 u_EyePos;
 
+// These are the interpolated values out of the rasterizer, so you can't know
+// their specific values without knowing the vertices that contributed to them
+in vec3 fs_Pos;
+in vec4 fs_Nor;
+in vec4 fs_LightVec;
+in vec4 fs_Col;
+ in float fs_Shininess;
+flat in vec3 fs_FlatPos;
+
 const float PI = 3.14159265;
 
 // https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
@@ -238,13 +247,10 @@ vec4 getFBMNormal(vec3 pt) {
 }
 
 
-// These are the interpolated values out of the rasterizer, so you can't know
-// their specific values without knowing the vertices that contributed to them
-in vec3 fs_Pos;
-in vec4 fs_Nor;
-in vec4 fs_LightVec;
-in vec4 fs_Col;
-flat in float fs_Shininess;
+float getRealShininess() {
+    return distance(fs_FlatPos, fs_Pos) > 0.2 ? 5.0 : fs_Shininess;
+}
+
 
 out vec4 out_Col; // This is the final output color that you will see on your
                   // screen for the pixel that is currently being processed.
@@ -270,19 +276,22 @@ void main()
         diffuseColor.xyz = fs_Col.xyz;
 
         // Calculate the diffuse term for Lambert shading
-        vec4 adjNor = fs_Shininess <= 5.0 ? getFBMNormal(fs_Pos) : fs_Nor;
+        float adjShininess = fs_Shininess;// <= 5.0 ? fs_Shininess : getRealShininess();
+        vec4 adjNor = adjShininess <= 5.0 ? getFBMNormal(fs_Pos) : fs_Nor;
         float diffuseTerm = dot(normalize(adjNor), normalize(fs_LightVec));
         // Avoid negative lighting values
-        diffuseTerm = (fs_Shininess <= 5.0 ? 1.0 : clamp(diffuseTerm, 0.0, 1.0)) * 0.7;
+        diffuseTerm = (adjShininess <= 5.0 ? 1.0 : clamp(diffuseTerm, 0.0, 1.0)) * 0.7;
         worleyResult worley = getWorley(fs_Pos, 0.65, 1.0);
-        diffuseColor.xyz = fs_Shininess <= 5.0 ? getLavaColor(fs_Pos, worley) : diffuseColor.xyz;
+        vec3 lavaColor = getLavaColor(fs_Pos, worley);
+        diffuseColor.xyz = adjShininess <= 5.0 ? lavaColor : diffuseColor.xyz;
+        diffuseColor.xyz = mix(lavaColor, diffuseColor.xyz, smoothstep(4.0, 50.0, adjShininess));
 
 
         float ambientTerm = 0.3;
 
         vec3 halfVec = normalize(fs_LightVec.xyz + normalize(u_EyePos - fs_Pos));
-        float specularTerm = pow(max(0.0, dot(halfVec, adjNor.xyz)), fs_Shininess);
-        specularTerm = fs_Shininess > 5.5 ? 0.0 : (0.0, 0.5, specularTerm);
+        float specularTerm = pow(max(0.0, dot(halfVec, adjNor.xyz)), adjShininess);
+        specularTerm = adjShininess > 5.5 ? 0.0 : (0.0, 0.5, specularTerm);
 
         float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
                                                             //to simulate ambient lighting. This ensures that faces that are not
@@ -291,4 +300,10 @@ void main()
         // Compute final shaded color
         out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
         out_Col.xyz += vec3(specularTerm);
+
+        /*
+        if (dot(fs_Pos, fs_FlatPos) > 0.999 && abs(length(fs_Pos) - length(fs_FlatPos)) > 0.1) {
+            out_Col.xyz = vec3(1.0, 0.0, 1.0);
+        }
+        */
 }
