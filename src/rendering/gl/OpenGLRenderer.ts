@@ -19,6 +19,7 @@ class OpenGLRenderer {
   lightPos: vec3;
   lavaBias: number;
   plumeBias: number;
+  edgeClarity: number;
 
   constructor(public canvas: HTMLCanvasElement) {
     this.geometryColor = vec4.fromValues(0, 0, 0, 1);
@@ -34,6 +35,7 @@ class OpenGLRenderer {
     this.lightPos = vec3.fromValues(1, 1, 1);
     this.lavaBias = 0.5;
     this.plumeBias = 0;
+    this.edgeClarity = 0;
   }
 
   setClearColor(r: number, g: number, b: number, a: number) {
@@ -67,6 +69,10 @@ class OpenGLRenderer {
 
   setPlumeBias(plumeBias: number) {
       this.plumeBias = plumeBias;
+  }
+
+  setEdgeClarity(edgeClarity: number) {
+      this.edgeClarity = edgeClarity;
   }
 
   toggleAnimXZ() {
@@ -103,6 +109,7 @@ class OpenGLRenderer {
     prog.setLightPos(this.lightPos);
     prog.setLavaBias(this.lavaBias);
     prog.setPlumeBias(this.plumeBias);
+    prog.setEdgeClarity(this.edgeClarity);
     prog.setGeometryColor(this.geometryColor);
     let now = Date.now();
     let delta = now - this.startTime;

@@ -31,8 +31,9 @@ const controls = {
   lightX: 1,
   lightY: 1,
   lightZ: 1,
-  lavaBias: 0.5,
-  plumeBias: 0.0,
+  lavaBias: 50,
+  plumeBias: 0,
+  edgeClarity: 0,
 };
 
 let icosphere: Icosphere;
@@ -72,12 +73,13 @@ function main() {
   gui.add(controls, 'tesselations', 0, 8).step(1);
   gui.add(controls, 'Load Scene');
   let colorController = gui.addColor(controls, 'geometryColor');
-  gui.add(controls, 'shader', {"Lame Lambert": ShaderEnum.LAMBERT, "Cool Custom": ShaderEnum.CUSTOM, "Decent Disks": ShaderEnum.DISKS, "Plumous Planet": ShaderEnum.PLANET});
+  gui.add(controls, 'shader', {"Lame Lambert": ShaderEnum.LAMBERT, "Cool Custom": ShaderEnum.CUSTOM, "Decent Disks": ShaderEnum.DISKS, "Plumous Planet": ShaderEnum.PLANET, "Urban Planet": ShaderEnum.BLDGS, "Magic Plumous Planet": ShaderEnum.MAGIC});
   let speedController = gui.add(controls, 'shaderSpeed', 0, 10);
   //gui.add(controls, 'Toggle tilting');
   //gui.add(controls, 'Toggle squishing');
-  gui.add(controls, 'lavaBias', 0, 1);
-  gui.add(controls, 'plumeBias', 0, 1);
+  gui.add(controls, 'lavaBias', 0, 100);
+  gui.add(controls, 'plumeBias', 0, 100);
+  gui.add(controls, 'edgeClarity', 0, 100);
   let lightFolder = gui.addFolder('Light Position');
   lightFolder.add(controls, 'lightX');
   lightFolder.add(controls, 'lightY');
@@ -139,11 +141,23 @@ function main() {
     new Shader(gl.FRAGMENT_SHADER, require('./shaders/planet-frag.glsl')),
   ]);
 
+  const planetMagic = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/planet-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/planet-magic-frag.glsl')),
+  ]);
+
+  const bldgs = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require('./shaders/bldgs-vert.glsl')),
+    new Shader(gl.FRAGMENT_SHADER, require('./shaders/bldgs-frag.glsl')),
+  ]);
+
   let shaders: { [id: number]: ShaderProgram; } = {};
   shaders[ShaderEnum.LAMBERT] = lambert;
   shaders[ShaderEnum.CUSTOM] = custom;
   shaders[ShaderEnum.DISKS] = disks;
   shaders[ShaderEnum.PLANET] = planet;
+  shaders[ShaderEnum.MAGIC] = planetMagic;
+  shaders[ShaderEnum.BLDGS] = bldgs;
 
   // This function will be called every frame
   function tick() {
@@ -152,8 +166,9 @@ function main() {
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.clear();
     renderer.setLightPos(vec3.fromValues(controls.lightX, controls.lightY, controls.lightZ));
-    renderer.setLavaBias(controls.lavaBias);
-    renderer.setPlumeBias(controls.plumeBias);
+    renderer.setLavaBias(controls.lavaBias / 100);
+    renderer.setPlumeBias(controls.plumeBias / 100);
+    renderer.setEdgeClarity(controls.edgeClarity / 100);
     renderer.render(camera, shaders[controls.shader], [
       icosphere,
       // square,

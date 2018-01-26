@@ -37,6 +37,7 @@ class ShaderProgram {
   unifLightPos: WebGLUniformLocation;
   unifLavaBias: WebGLUniformLocation;
   unifPlumeBias: WebGLUniformLocation;
+  unifEdgeClarity: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -52,18 +53,19 @@ class ShaderProgram {
     this.attrPos = gl.getAttribLocation(this.prog, "vs_Pos");
     this.attrNor = gl.getAttribLocation(this.prog, "vs_Nor");
     this.attrCol = gl.getAttribLocation(this.prog, "vs_Col");
-    this.unifModel      = gl.getUniformLocation(this.prog, "u_Model");
-    this.unifModelInvTr = gl.getUniformLocation(this.prog, "u_ModelInvTr");
-    this.unifViewProj   = gl.getUniformLocation(this.prog, "u_ViewProj");
-    this.unifColor      = gl.getUniformLocation(this.prog, "u_Color");
-    this.unifTime       = gl.getUniformLocation(this.prog, "u_Time");
-    this.unifTimeXZ     = gl.getUniformLocation(this.prog, "u_TimeXZ");
-    this.unifTimeY      = gl.getUniformLocation(this.prog, "u_TimeY");
-    this.unifSpeed      = gl.getUniformLocation(this.prog, "u_Speed");
-    this.unifEyePos     = gl.getUniformLocation(this.prog, "u_EyePos");
-    this.unifLightPos   = gl.getUniformLocation(this.prog, "u_LightPos");
-    this.unifLavaBias   = gl.getUniformLocation(this.prog, "u_LavaBias");
-    this.unifPlumeBias  = gl.getUniformLocation(this.prog, "u_PlumeBias");
+    this.unifModel        = gl.getUniformLocation(this.prog, "u_Model");
+    this.unifModelInvTr   = gl.getUniformLocation(this.prog, "u_ModelInvTr");
+    this.unifViewProj     = gl.getUniformLocation(this.prog, "u_ViewProj");
+    this.unifColor        = gl.getUniformLocation(this.prog, "u_Color");
+    this.unifTime         = gl.getUniformLocation(this.prog, "u_Time");
+    this.unifTimeXZ       = gl.getUniformLocation(this.prog, "u_TimeXZ");
+    this.unifTimeY        = gl.getUniformLocation(this.prog, "u_TimeY");
+    this.unifSpeed        = gl.getUniformLocation(this.prog, "u_Speed");
+    this.unifEyePos       = gl.getUniformLocation(this.prog, "u_EyePos");
+    this.unifLightPos     = gl.getUniformLocation(this.prog, "u_LightPos");
+    this.unifLavaBias     = gl.getUniformLocation(this.prog, "u_LavaBias");
+    this.unifPlumeBias    = gl.getUniformLocation(this.prog, "u_PlumeBias");
+    this.unifEdgeClarity  = gl.getUniformLocation(this.prog, "u_EdgeClarity");
   }
 
   use() {
@@ -154,6 +156,13 @@ class ShaderProgram {
     this.use();
     if (this.unifPlumeBias !== -1) {
       gl.uniform1f(this.unifPlumeBias, plumeBias);
+    }
+  }
+
+  setEdgeClarity(edgeClarity: number) {
+    this.use();
+    if (this.unifEdgeClarity !== -1) {
+      gl.uniform1f(this.unifEdgeClarity, edgeClarity);
     }
   }
 
