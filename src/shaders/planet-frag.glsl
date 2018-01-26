@@ -15,6 +15,7 @@ uniform vec4 u_Color; // The color with which to render this instance of geometr
 
 uniform float u_Time;
 uniform float u_Speed;
+uniform float u_PlumeBias;
 uniform float u_EdgeClarity;
 
 uniform vec3 u_EyePos;
@@ -155,7 +156,7 @@ vec3 getLavaColor(vec3 pt, worleyResult worley) {
     float projLen = dot(bldgDir, pt);
     // determines whether we are "on" the building
     //float s = (dist > lavaRadius ? 1.0 : 0.0);
-    float edgeClarity = mix(30.0, 2.0, u_EdgeClarity);
+    float edgeClarity = mix(40.0, 2.0, u_EdgeClarity);
     float s = smoothstep(0.0, edgeClarity * lavaRadius, dist - lavaRadius);
     vec3 faceColor = mix(LAVA_ORANGE, LAVA_BRIGHT_ORANGE, cos(u_Time * 0.001) * 0.5 + 0.5);
     vec3 edgeColor = mix(LAVA_BRIGHT_RED, LAVA_RED, cos(u_Time * 0.001) * 0.5 + 0.5);
@@ -277,8 +278,9 @@ void main()
         diffuseTerm *= mix(0.3, 1.0, smoothstep(-0.7, 0.3, dot(normalize(fs_Pos), normalize(fs_LightVec.xyz))));
         // Avoid negative lighting values
         diffuseTerm = (adjShininess <= 5.0 ? 1.0 : clamp(diffuseTerm, 0.0, 1.0)) * 0.9;
-        worleyResult worley = getWorley(fs_Pos, 0.65, 1.0);
-        vec3 lavaColor = getLavaColor(fs_Pos, worley);
+        float plumeWorleySize = mix(0.85, 0.35, u_PlumeBias);
+        worleyResult worley = getWorley(normalize(fs_Pos), plumeWorleySize, 1.0);
+        vec3 lavaColor = getLavaColor(normalize(fs_Pos), worley);
         diffuseColor.xyz = adjShininess <= 5.0 ? lavaColor : diffuseColor.xyz;
         diffuseColor.xyz = mix(lavaColor, diffuseColor.xyz, smoothstep(4.0, 50.0, adjShininess));
 
