@@ -7,7 +7,7 @@
 
 ## Live Demo
 
-- Click here for the live demo!
+- Click below for the live demo!
 
 [![](img/lava.gif)](https://maukmu.github.io/homework-1-noisy-planets-MauKMu/)
 
@@ -16,15 +16,56 @@
 ### General Planet Behavior
 
 - I was inspired by the idea of using **Worley noise** to split my planet into different "biomes". I believe this idea was mentioned in class, and I also remember discussing it in CIS460 last semester.
-- However, instead of traditional biomes (e.g. Minecraft), I wanted to do something slightly different. My initial idea was to have an "urban biomes", where buildings would appear of instead of natural geographic features.
+- However, instead of traditional biomes (e.g. Minecraft), I wanted to do something slightly different. My initial idea was to have an "urban biome", where buildings would appear of instead of natural geographic features. The ideas was that the natural and urban biomes would "fight" each other.
   - I had some difficulty of making these buildings look like real buildings. Eventually, a TA suggested that I should scrap the idea and work on another biome. The partial implementation of this is available under the "Urban Planet" shader.
-- Coding and algorithms
-- *Gambiarras*
-- etc.
+  - Instead, I implemented a "lava" biome, which still "fights" with the hill-like natural biome.
+- For a given vertex `v` in the vertex shader, I compute a time-dependent Worley noise value based on `v`'s position. This is scaled and becomes `f`, the biome factor.
+- The biomes are approximately determined by `f` (with default settings) as follows:
+  - `f < 0.33`: lava biome
+  - `0.33 <= f < 0.67`: plain biome
+  - `0.67 <= f`: hilly biome
+- Because `f` is time-depdent, `v` will be part of different biomes as time passes.
+- Within a biome, `f` is used to interpolate between that biomes and its neighbors.
+
+### Natural Biomes (Plain and Hilly)
+
+- This biome uses a **3D Perlin noise** function as a basis for its height field. The noise is summed using the **FBM** method to make it more smooth.
+- An approximation of the normal is computed using the gradient of the noise.
+- There are two differences between the plain and hilly biomes:
+  - Let `n` be the noise computed for `v`. The final height by which `v` is displaced is of the form `K * n ^ E`, where `K` and `E` increase with `f` in order to make higher values of `f` give sharper and higher terrain.
+  - The color of `v` is interpolated from brown-ish (plain) to green (hilly) using `f`.
+- This terrain uses regular **Lambert shading**.
+
+### Lava Biome
+
+- This biome uses another layer of **Worley noise**, but a time-independent one. This is because we want a fixed "Worley point" (i.e. closest neighbor when computing Worley noise).
+- This biome is supposed to have "lava plumes", or at least an approximation of them. They essentially look like very viscous lava splashing up.
+- These plumes are animated based on the Worley point (the center of the plume has the same radial direction as the Worley point), hence the need for it to be constant.
+- The animation is achieved by interpolating three "keyframes".
+- In order to make the lava look more lava-like, the fragment shader does the following: 
+    - Compute a time-dependent **Worley noise** value using the interpolated `fs_Pos` obtained from the the rasterizer.
+    - "Edges" in the Worley noise (see IQ's article below) are assigned a red color, and the inside of the cells is assigned an orange color. These two are blended together based on the point's distance to the edge.
+    - In addition, a lava normal is computed using the **FBM-summed 3D Perlin noise**. This normal is used for **Blinn-Phong** shading to make the lava shiny.
+
+### "Shininess"
+
+- `fs_Shininess` is used in the fragment shader as a "hint" as to whether the fragment is part of a lava biome.
+## Controls
+
+- Below is an explanation of the options on the GUI:
+  - `shader`: Pick which shader to use.
+  - `shaderSpeed`: Choose how fast the shader animates. Lets you pause. (Disabled for "Cool Custom" shader)
+  - `lavaBias`: As this increases, lava becomes more prominent (lava biome more likely to appear).
+  - `plumeBias`: As this increases, lava plumes appear more often (Worley lava cells shrink).
+  - `edgeClarity`: As this increases, edges of Worley lava cells becomes sharper.
+  - `Light Position`: `lightX`,  `lightY`, and  `lightZ` determine the light's position. 
 
 ## External References
 
 - [IQ's article about "Voronoi Edges"](http://www.iquilezles.org/www/articles/voronoilines/voronoilines.htm)
+- [Patricio Gonzales Vivo's Gist about noise](https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83)
+- Advice from Dan, Charles, Chloe.
+
 
 ## Objective
 - Continue practicing WebGL and Typescript
