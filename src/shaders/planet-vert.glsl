@@ -138,8 +138,6 @@ float surflet(vec3 P, vec3 gridPoint)
 
     // Get the random vector for the grid point
     vec3 gradient = random3(gridPoint);
-    //vec3 gradient = vec3(random2(gridPoint.xy), random2(gridPoint.zz).x);
-    //vec3 gradient = random3(gridPoint);
     // Get the vector from the grid point to P
     vec3 diff = P - gridPoint;
     // Get the value of our height field by dotting grid->P with our gradient
@@ -178,19 +176,6 @@ float PerlinNoise(vec3 v)
 float normalizedPerlinNoise(vec3 v) {
     return clamp(0.0, 1.0, PerlinNoise(v) * 0.5 + 0.5);
 }
-
-/*
-vec2 PixelToGrid(vec2 pixel, float size)
-{
-    vec2 uv = pixel.xy / u_Dimensions.xy;
-    // Account for aspect ratio
-    uv.x = uv.x * float(u_Dimensions.x) / float(u_Dimensions.y);
-    // Determine number of cells (NxN)
-    uv *= size;
-
-    return uv;
-}
-*/
 
 vec3 sphereToGrid(vec3 pt, float size) {
     vec3 v = pt * 0.5 + 0.5;
@@ -337,7 +322,7 @@ vec3 getLavaDisp(vec3 pt, inout worleyResult worley) {
     vec3 edgeColor = mix(LAVA_ORANGE, LAVA_BRIGHT_ORANGE, cos(u_Time * 0.001) * 0.5 + 0.5);
     vec3 faceColor = mix(LAVA_BRIGHT_RED, LAVA_RED, cos(u_Time * 0.001) * 0.5 + 0.5);
 
-    return s * normalize(pt) * 0.21;
+    return s * normalize(pt) * 0.41;
 }
 /* Recursive Perlin Noise */
 float getRecursivePerlin(vec3 pt, float freq) {
@@ -362,12 +347,6 @@ float getFBM(vec3 pt, float startFreq) {
         frequency *= 2.0;
     }
     return noiseSum / amplitudeSum;
-    /*
-    float rawFBM = noiseSum / amplitudeSum;
-    float t = cos(u_Time * 0.001);
-    bool eroded = t > 0.0;
-    return pow(rawFBM, eroded ? 1.0 : 3.0) * (eroded ? 0.8 : 1.87) + (eroded ? 0.0 : 0.2);
-    */
 }
 
 void main()
@@ -442,7 +421,7 @@ void main()
     vec4 naturePos = u_Model * (vec4(t, t, t, 1.0) * vs_Pos);   // Temporarily store the transformed vertex positions for use below
     vec4 bldgPos = u_Model * (bldgDisp + vs_Pos);   // Temporarily store the transformed vertex positions for use below
     vec4 modelposition = mix(bldgPos, naturePos,  smoothstep(0.1667, 0.33, xzAngle));
-    modelposition = bldgPos;
+    //modelposition = bldgPos;
     fs_Pos = modelposition.xyz;
 
     const vec3 erodedColor = vec3(124.0, 87.0, 0.0) / 255.0;

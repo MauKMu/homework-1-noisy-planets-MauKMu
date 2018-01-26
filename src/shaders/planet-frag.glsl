@@ -18,6 +18,8 @@ uniform float u_Speed;
 
 uniform vec3 u_EyePos;
 
+const float PI = 3.14159265;
+
 // https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
 vec3 random3(vec3 c) {
     float j = 4096.0*sin(dot(c, vec3(17.0, 59.4, 15.0)));
@@ -128,8 +130,8 @@ const float lavaRadius = 0.01;
 const vec3 LAVA_ORANGE = vec3(255.0, 110.0, 0.0) / 255.0;
 const vec3 LAVA_BRIGHT_ORANGE = vec3(255.0, 142.0, 56.0) / 255.0;
 
-const vec3 LAVA_RED = vec3(209.0, 24.0, 0.0) / 255.0;
-const vec3 LAVA_BRIGHT_RED = vec3(255.0, 26.0, 56.0) / 255.0;
+const vec3 LAVA_RED = vec3(183.0, 21.0, 0.0) / 255.0;
+const vec3 LAVA_BRIGHT_RED = vec3(209.0, 24.0, 0.0) / 255.0;
 
 vec3 getLavaColor(vec3 pt, worleyResult worley) {
     vec3 bldgDir = worley.normClosest0;
@@ -150,6 +152,91 @@ vec3 getLavaColor(vec3 pt, worleyResult worley) {
 
     return mix(edgeColor, faceColor, s);
 }
+
+float surflet(vec3 P, vec3 gridPoint)
+{
+    // Compute falloff function by converting linear distance to a polynomial
+    float distX = abs(P.x - gridPoint.x);
+    float distY = abs(P.y - gridPoint.y);
+    float distZ = abs(P.z - gridPoint.z);
+    float tX = 1.0 - 6.0 * pow(distX, 5.0) + 15.0 * pow(distX, 4.0) - 10.0 * pow(distX, 3.0);
+    float tY = 1.0 - 6.0 * pow(distY, 5.0) + 15.0 * pow(distY, 4.0) - 10.0 * pow(distY, 3.0);
+    float tZ = 1.0 - 6.0 * pow(distZ, 5.0) + 15.0 * pow(distZ, 4.0) - 10.0 * pow(distZ, 3.0);
+
+    // Get the random vector for the grid point
+    vec3 gradient = random3(gridPoint);
+    // Get the vector from the grid point to P
+    vec3 diff = P - gridPoint;
+    // Get the value of our height field by dotting grid->P with our gradient
+    float height = dot(diff, gradient);
+    // Scale our height field (i.e. reduce it) by our polynomial falloff function
+    return height * tX * tY * tZ;
+}
+
+float PerlinNoise(vec3 v)
+{
+    // Tile the space
+    vec3 vXLYLZL = floor(v);
+    vec3 vXHYLZL = vXLYLZL + vec3(1.0, 0.0, 0.0);
+    vec3 vXHYHZL = vXLYLZL + vec3(1.0, 1.0, 0.0);
+    vec3 vXLYHZL = vXLYLZL + vec3(0.0, 1.0, 0.0);
+    vec3 vXLYLZH = vXLYLZL + vec3(0.0, 0.0, 1.0);
+    vec3 vXHYLZH = vXLYLZH + vec3(1.0, 0.0, 0.0);
+    vec3 vXHYHZH = vXLYLZH + vec3(1.0, 1.0, 0.0);
+    vec3 vXLYHZH = vXLYLZH + vec3(0.0, 1.0, 0.0);
+
+    return surflet(v, vXLYLZL) + surflet(v, vXHYLZL) + surflet(v, vXHYHZL) + surflet(v, vXLYHZL) +
+        surflet(v, vXLYLZH) + surflet(v, vXHYLZH) + surflet(v, vXHYHZH) + surflet(v, vXLYHZH);
+}
+
+float normalizedPerlinNoise(vec3 v) {
+    return clamp(0.0, 1.0, PerlinNoise(v) * 0.5 + 0.5);
+}
+
+vec3 sphereToGrid(vec3 pt, float size) {
+    vec3 v = pt * 0.5 + 0.5;
+    return size * v;
+}
+
+/* Recursive Perlin Noise */
+float getRecursivePerlin(vec3 pt, float freq) {
+    vec3 gridPt = sphereToGrid(pt, 6.0 * freq);
+    // we recursive now boys
+    float t0 = normalizedPerlinNoise(gridPt);
+    return normalizedPerlinNoise(gridPt + sphereToGrid(vec3(t0) * 2.0 - vec3(1.0), 4.0 * freq));
+}
+
+/* FBM (uses Recursive Perlin) */
+float getFBM(vec3 pt, float startFreq) {
+    float noiseSum = 0.0;
+    float amplitudeSum = 0.0;
+    float amplitude = 0.5;
+    float frequency = startFreq;
+    for (int i = 0; i < 5; i++) {
+        float perlin = getRecursivePerlin(pt, frequency);
+        //uv = vec2(cos(3.14159/3.0 * i) * uv.x - sin(3.14159/3.0 * i) * uv.y, sin(3.14159/3.0 * i) * uv.x + cos(3.14159/3.0 * i) * uv.y);
+        noiseSum += perlin * amplitude;
+        amplitudeSum += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.0;
+    }
+    return noiseSum / amplitudeSum;
+}
+
+vec4 getFBMNormal(vec3 pt) {
+    vec3 adjPt = pt + vec3(sin(u_Time * 0.00001), cos(u_Time * 0.000034), cos(cos(u_Time * 0.000002) * PI));
+    float t = getFBM(adjPt, 0.5);
+    // estimate normal
+    const float GRADIENT_EPSILON = 0.05;
+    float fbmXL = getFBM(adjPt - vec3(GRADIENT_EPSILON, 0.0, 0.0), 0.5);
+    float fbmXH = getFBM(adjPt + vec3(GRADIENT_EPSILON, 0.0, 0.0), 0.5);
+    float fbmYL = getFBM(adjPt - vec3(0.0, GRADIENT_EPSILON, 0.0), 0.5);
+    float fbmYH = getFBM(adjPt + vec3(0.0, GRADIENT_EPSILON, 0.0), 0.5);
+    float fbmZL = getFBM(adjPt - vec3(0.0, 0.0, GRADIENT_EPSILON), 0.5);
+    float fbmZH = getFBM(adjPt + vec3(0.0, 0.0, GRADIENT_EPSILON), 0.5);
+    return vec4(normalize(vec3(fbmXL - fbmXH, fbmYL - fbmYH, fbmZL - fbmZH)), 0.0);
+}
+
 
 // These are the interpolated values out of the rasterizer, so you can't know
 // their specific values without knowing the vertices that contributed to them
@@ -183,7 +270,8 @@ void main()
         diffuseColor.xyz = fs_Col.xyz;
 
         // Calculate the diffuse term for Lambert shading
-        float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
+        vec4 adjNor = fs_Shininess <= 5.0 ? getFBMNormal(fs_Pos) : fs_Nor;
+        float diffuseTerm = dot(normalize(adjNor), normalize(fs_LightVec));
         // Avoid negative lighting values
         diffuseTerm = (fs_Shininess <= 5.0 ? 1.0 : clamp(diffuseTerm, 0.0, 1.0)) * 0.7;
         worleyResult worley = getWorley(fs_Pos, 0.65, 1.0);
@@ -193,7 +281,7 @@ void main()
         float ambientTerm = 0.3;
 
         vec3 halfVec = normalize(fs_LightVec.xyz + normalize(u_EyePos - fs_Pos));
-        float specularTerm = pow(max(0.0, dot(halfVec, fs_Nor.xyz)), fs_Shininess);
+        float specularTerm = pow(max(0.0, dot(halfVec, adjNor.xyz)), fs_Shininess);
         specularTerm = fs_Shininess > 5.5 ? 0.0 : (0.0, 0.5, specularTerm);
 
         float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
