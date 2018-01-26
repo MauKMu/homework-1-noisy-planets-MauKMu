@@ -28,7 +28,7 @@ const controls = {
   shaderSpeed: 1,
   'Toggle tilting': toggleAnimXZ,
   'Toggle squishing': toggleAnimY,
-  lightX: 1,
+  lightX: 10,
   lightY: 1,
   lightZ: 1,
   lavaBias: 50,

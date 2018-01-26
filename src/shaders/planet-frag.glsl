@@ -25,8 +25,7 @@ in vec3 fs_Pos;
 in vec4 fs_Nor;
 in vec4 fs_LightVec;
 in vec4 fs_Col;
- in float fs_Shininess;
-flat in vec3 fs_FlatPos;
+in float fs_Shininess;
 
 const float PI = 3.14159265;
 
@@ -249,24 +248,18 @@ vec4 getFBMNormal(vec3 pt) {
 }
 
 
-float getRealShininess() {
-    return distance(fs_FlatPos, fs_Pos) > 0.2 ? 5.0 : fs_Shininess;
-}
-
 
 out vec4 out_Col; // This is the final output color that you will see on your
                   // screen for the pixel that is currently being processed.
 
 void main()
 {
-        out_Col = fs_Col;
-        //return;
         vec4 diffuseColor = vec4(1.0);
         diffuseColor.xyz = vec3(0.89);
         diffuseColor.xyz = fs_Col.xyz;
 
         // Calculate the diffuse term for Lambert shading
-        float adjShininess = fs_Shininess;// <= 5.0 ? fs_Shininess : getRealShininess();
+        float adjShininess = fs_Shininess;
         vec4 adjNor = adjShininess <= 5.0 ? getFBMNormal(fs_Pos) : fs_Nor;
         /*
         vec3 tbnNormal = normalize(fs_Pos);
@@ -303,11 +296,4 @@ void main()
         // Compute final shaded color
         out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
         out_Col.xyz += vec3(specularTerm);
-        //out_Col.xyz = adjNor.xyz * 0.5 + vec3(0.5);
-
-        /*
-        if (dot(fs_Pos, fs_FlatPos) > 0.999 && abs(length(fs_Pos) - length(fs_FlatPos)) > 0.1) {
-            out_Col.xyz = vec3(1.0, 0.0, 1.0);
-        }
-        */
 }

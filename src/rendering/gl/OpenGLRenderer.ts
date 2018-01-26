@@ -32,7 +32,7 @@ class OpenGLRenderer {
     this.startTimeY = this.startTime;
     this.lastStopTimeY = 0;
     this.accTime = 0;
-    this.lightPos = vec3.fromValues(1, 1, 1);
+    this.lightPos = vec3.fromValues(10, 1, 1);
     this.lavaBias = 0.5;
     this.plumeBias = 0;
     this.edgeClarity = 0;
