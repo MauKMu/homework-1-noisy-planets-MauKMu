@@ -42,6 +42,8 @@
 - This biome uses another layer of **Worley noise**, but a time-independent one. This is because we want a fixed "Worley point" (i.e. closest neighbor when computing Worley noise).
 - This biome is supposed to have "lava plumes", or at least an approximation of them. They essentially look like very viscous lava splashing up.
 - These plumes are animated based on the Worley point (the center of the plume has the same radial direction as the Worley point), hence the need for it to be constant.
+    - This means decreasing the Worley grid size increases the number of plumes (see "Controls" below).
+    - The maximum height of the plume and the time offset (used so plumes don't all animate in sync) are each generated using a **"raw" 3D noise** function from Patrick Gonzalez Vivo. 
 - The animation is achieved by interpolating three "keyframes".
 - In order to make the lava look more lava-like, the fragment shader does the following: 
     - Compute a time-dependent **Worley noise** value using the interpolated `fs_Pos` obtained from the the rasterizer.
