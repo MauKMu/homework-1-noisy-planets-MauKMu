@@ -19,6 +19,7 @@
 - However, instead of traditional biomes (e.g. Minecraft), I wanted to do something slightly different. My initial idea was to have an "urban biome", where buildings would appear of instead of natural geographic features. The ideas was that the natural and urban biomes would "fight" each other.
   - I had some difficulty of making these buildings look like real buildings. Eventually, a TA suggested that I should scrap the idea and work on another biome. The partial implementation of this is available under the "Urban Planet" shader.
   - Instead, I implemented a "lava" biome, which still "fights" with the hill-like natural biome.
+  - This shader is implemented in "Plumous Planet" (the reason for this name should become clear soon).
 - For a given vertex `v` in the vertex shader, I compute a time-dependent Worley noise value based on `v`'s position. This is scaled and becomes `f`, the biome factor.
 - The biomes are approximately determined by `f` (with default settings) as follows:
   - `f < 0.33`: lava biome
@@ -57,8 +58,15 @@
   - `shaderSpeed`: Choose how fast the shader animates. Lets you pause. (Disabled for "Cool Custom" shader)
   - `lavaBias`: As this increases, lava becomes more prominent (lava biome more likely to appear).
   - `plumeBias`: As this increases, lava plumes appear more often (Worley lava cells shrink).
-  - `edgeClarity`: As this increases, edges of Worley lava cells becomes sharper.
+  - `edgeClarity`: As this increases, edges of Worley lava cells becomes sharper (less blending with inner cell color).
   - `Light Position`: `lightX`,  `lightY`, and  `lightZ` determine the light's position. 
+
+## Bonus Shaders
+
+- Both of these essentially replace the lava biome with a new biome.
+  - "Urban Planet": As mentioned above, a partial implementation of my idea of having an urban biome. Buildings are white and shiny, and have (mostly) straight wall. They look smoother with higher tessellation levels.
+  - "Magic Plumous Planet": While debugging, I tried coloring the lava with its normals, and though the result looked very interesting. Instead of lava pools, I like to think it's some sort of magic potion reservoir that would do weird things if you fell in it (not unlike Banjo-Tooie's transformation mechanic).
+
 
 ## External References
 
