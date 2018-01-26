@@ -34,6 +34,9 @@ class ShaderProgram {
   unifTimeY: WebGLUniformLocation;
   unifSpeed: WebGLUniformLocation;
   unifEyePos: WebGLUniformLocation;
+  unifLightPos: WebGLUniformLocation;
+  unifLavaBias: WebGLUniformLocation;
+  unifPlumeBias: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -58,6 +61,9 @@ class ShaderProgram {
     this.unifTimeY      = gl.getUniformLocation(this.prog, "u_TimeY");
     this.unifSpeed      = gl.getUniformLocation(this.prog, "u_Speed");
     this.unifEyePos     = gl.getUniformLocation(this.prog, "u_EyePos");
+    this.unifLightPos   = gl.getUniformLocation(this.prog, "u_LightPos");
+    this.unifLavaBias   = gl.getUniformLocation(this.prog, "u_LavaBias");
+    this.unifPlumeBias  = gl.getUniformLocation(this.prog, "u_PlumeBias");
   }
 
   use() {
@@ -127,6 +133,27 @@ class ShaderProgram {
     this.use();
     if (this.unifEyePos !== -1) {
       gl.uniform3fv(this.unifEyePos, eyePos);
+    }
+  }
+
+  setLightPos(lightPos: vec3) {
+    this.use();
+    if (this.unifLightPos !== -1) {
+      gl.uniform3fv(this.unifLightPos, lightPos);
+    }
+  }
+
+  setLavaBias(lavaBias: number) {
+    this.use();
+    if (this.unifLavaBias !== -1) {
+      gl.uniform1f(this.unifLavaBias, lavaBias);
+    }
+  }
+
+  setPlumeBias(plumeBias: number) {
+    this.use();
+    if (this.unifPlumeBias !== -1) {
+      gl.uniform1f(this.unifPlumeBias, plumeBias);
     }
   }
 

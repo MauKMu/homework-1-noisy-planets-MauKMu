@@ -259,35 +259,36 @@ void main()
 {
         out_Col = fs_Col;
         //return;
-        // Material base color (before shading)
-        // IQ's iridescent palette...
-        vec3 bias = abs(fs_Nor.xyz);
-        vec3 scale = vec3(1.0) - bias;
-        vec3 freq = vec3(1.5, 0.5, 1.1);
-        vec3 phase = vec3(0.0, 0.5, 0.33);
-        float t = u_Speed * u_Time * 0.0001;
-        vec3 iridescent = bias + scale * cos(freq * t + phase);
-        // With alternating between the color and its RGB->GBR shifted version
-        float tShift = smoothstep(0.0, 1.0, (sin(u_Time * 0.000314) * 0.5 + 0.5));
-        vec4 baseColor = vec4(iridescent, 1.0);
-        vec4 altColor = baseColor.yzxw;
-        vec4 diffuseColor = mix(baseColor, altColor, tShift);
+        vec4 diffuseColor = vec4(1.0);
         diffuseColor.xyz = vec3(0.89);
         diffuseColor.xyz = fs_Col.xyz;
 
         // Calculate the diffuse term for Lambert shading
         float adjShininess = fs_Shininess;// <= 5.0 ? fs_Shininess : getRealShininess();
         vec4 adjNor = adjShininess <= 5.0 ? getFBMNormal(fs_Pos) : fs_Nor;
+        /*
+        vec3 tbnNormal = normalize(fs_Pos);
+        vec3 tbnTangent = normalize(cross(vec3(0.0, 1.0, 0.0), tbnNormal));
+        vec3 tbnBitangent = normalize(cross(tbnNormal, tbnTangent));
+        mat3 tbn;// = mat3(tbnTangent, tbnBitangent, tbnNormal);
+        tbn[0] = tbnBitangent;
+        tbn[1] = tbnNormal;
+        tbn[2] = tbnTangent;
+        adjNor.xyz = tbn * adjNor.xyz;// vec3(0.0, 1.0, 0.0);
+        */
+
         float diffuseTerm = dot(normalize(adjNor), normalize(fs_LightVec));
+        // pretend we know how to shade things
+        diffuseTerm *= mix(0.3, 1.0, smoothstep(-0.7, 0.3, dot(normalize(fs_Pos), normalize(fs_LightVec.xyz))));
         // Avoid negative lighting values
-        diffuseTerm = (adjShininess <= 5.0 ? 1.0 : clamp(diffuseTerm, 0.0, 1.0)) * 0.7;
+        diffuseTerm = (adjShininess <= 5.0 ? 1.0 : clamp(diffuseTerm, 0.0, 1.0)) * 0.9;
         worleyResult worley = getWorley(fs_Pos, 0.65, 1.0);
         vec3 lavaColor = getLavaColor(fs_Pos, worley);
         diffuseColor.xyz = adjShininess <= 5.0 ? lavaColor : diffuseColor.xyz;
         diffuseColor.xyz = mix(lavaColor, diffuseColor.xyz, smoothstep(4.0, 50.0, adjShininess));
 
 
-        float ambientTerm = 0.3;
+        float ambientTerm = 0.1;
 
         vec3 halfVec = normalize(fs_LightVec.xyz + normalize(u_EyePos - fs_Pos));
         float specularTerm = pow(max(0.0, dot(halfVec, adjNor.xyz)), adjShininess);
@@ -300,6 +301,7 @@ void main()
         // Compute final shaded color
         out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
         out_Col.xyz += vec3(specularTerm);
+        //out_Col.xyz = adjNor.xyz * 0.5 + vec3(0.5);
 
         /*
         if (dot(fs_Pos, fs_FlatPos) > 0.999 && abs(length(fs_Pos) - length(fs_FlatPos)) > 0.1) {

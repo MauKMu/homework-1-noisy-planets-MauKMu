@@ -1,4 +1,4 @@
-import {mat4, vec4} from 'gl-matrix';
+import {mat4, vec3, vec4} from 'gl-matrix';
 import Drawable from './Drawable';
 import Camera from '../../Camera';
 import {gl} from '../../globals';
@@ -15,6 +15,10 @@ class OpenGLRenderer {
   startTimeY: number;
   lastStopTimeY: number;
   isStoppedY: boolean;
+  accTime: number;
+  lightPos: vec3;
+  lavaBias: number;
+  plumeBias: number;
 
   constructor(public canvas: HTMLCanvasElement) {
     this.geometryColor = vec4.fromValues(0, 0, 0, 1);
@@ -26,6 +30,10 @@ class OpenGLRenderer {
     this.isStoppedY = false;
     this.startTimeY = this.startTime;
     this.lastStopTimeY = 0;
+    this.accTime = 0;
+    this.lightPos = vec3.fromValues(1, 1, 1);
+    this.lavaBias = 0.5;
+    this.plumeBias = 0;
   }
 
   setClearColor(r: number, g: number, b: number, a: number) {
@@ -47,6 +55,18 @@ class OpenGLRenderer {
 
   setShaderSpeed(speed: number) {
       this.shaderSpeed = speed;
+  }
+
+  setLightPos(lightPos: vec3) {
+      this.lightPos = lightPos;
+  }
+
+  setLavaBias(lavaBias: number) {
+      this.lavaBias = lavaBias;
+  }
+
+  setPlumeBias(plumeBias: number) {
+      this.plumeBias = plumeBias;
   }
 
   toggleAnimXZ() {
@@ -80,9 +100,15 @@ class OpenGLRenderer {
     prog.setModelMatrix(model);
     prog.setViewProjMatrix(viewProj);
     prog.setEyePos(camera.position);
+    prog.setLightPos(this.lightPos);
+    prog.setLavaBias(this.lavaBias);
+    prog.setPlumeBias(this.plumeBias);
     prog.setGeometryColor(this.geometryColor);
     let now = Date.now();
-    prog.setTime(now - this.startTime);
+    let delta = now - this.startTime;
+    this.accTime += this.shaderSpeed * delta;
+    this.startTime = now;
+    prog.setTime(this.accTime);
     if (this.isStoppedXZ) {
       prog.setTimeXZ(this.lastStopTimeXZ);
     }
@@ -105,4 +131,5 @@ class OpenGLRenderer {
 };
 
 export default OpenGLRenderer;
+// pretend we know how to shade things
 

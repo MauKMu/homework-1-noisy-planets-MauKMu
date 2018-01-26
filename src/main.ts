@@ -14,6 +14,8 @@ enum ShaderEnum {
     CUSTOM,
     DISKS,
     PLANET,
+    BLDGS,
+    MAGIC,
 }
 
 // Define an object with application parameters and button callbacks
@@ -26,6 +28,11 @@ const controls = {
   shaderSpeed: 1,
   'Toggle tilting': toggleAnimXZ,
   'Toggle squishing': toggleAnimY,
+  lightX: 1,
+  lightY: 1,
+  lightZ: 1,
+  lavaBias: 0.5,
+  plumeBias: 0.0,
 };
 
 let icosphere: Icosphere;
@@ -65,10 +72,16 @@ function main() {
   gui.add(controls, 'tesselations', 0, 8).step(1);
   gui.add(controls, 'Load Scene');
   let colorController = gui.addColor(controls, 'geometryColor');
-  gui.add(controls, 'shader', {"Lame Lambert": ShaderEnum.LAMBERT, "Cool Custom": ShaderEnum.CUSTOM, "Decent Disks": ShaderEnum.DISKS, "Pesky Planet": ShaderEnum.PLANET});
+  gui.add(controls, 'shader', {"Lame Lambert": ShaderEnum.LAMBERT, "Cool Custom": ShaderEnum.CUSTOM, "Decent Disks": ShaderEnum.DISKS, "Plumous Planet": ShaderEnum.PLANET});
   let speedController = gui.add(controls, 'shaderSpeed', 0, 10);
-  gui.add(controls, 'Toggle tilting');
-  gui.add(controls, 'Toggle squishing');
+  //gui.add(controls, 'Toggle tilting');
+  //gui.add(controls, 'Toggle squishing');
+  gui.add(controls, 'lavaBias', 0, 1);
+  gui.add(controls, 'plumeBias', 0, 1);
+  let lightFolder = gui.addFolder('Light Position');
+  lightFolder.add(controls, 'lightX');
+  lightFolder.add(controls, 'lightY');
+  lightFolder.add(controls, 'lightZ');
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -138,6 +151,9 @@ function main() {
     stats.begin();
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.clear();
+    renderer.setLightPos(vec3.fromValues(controls.lightX, controls.lightY, controls.lightZ));
+    renderer.setLavaBias(controls.lavaBias);
+    renderer.setPlumeBias(controls.plumeBias);
     renderer.render(camera, shaders[controls.shader], [
       icosphere,
       // square,

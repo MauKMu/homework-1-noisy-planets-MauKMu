@@ -23,6 +23,8 @@ uniform float u_Time;
 uniform float u_TimeXZ;
 uniform float u_TimeY;
 uniform float u_Speed;
+uniform float u_LavaBias;
+uniform float u_PlumeBias;
 
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
@@ -37,9 +39,7 @@ out vec4 fs_Nor;            // The array of normals that has been transformed by
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
 
-const vec4 lightPos = vec4(5 + 1, 5, 3, 1); //The position of our virtual light, which is used to compute the shading of
-                                        //the geometry in the fragment shader.
-
+uniform vec3 u_LightPos;
 
 const float PI = 3.14159265;
 
@@ -286,36 +286,26 @@ const vec3 LAVA_BRIGHT_RED = vec3(255.0, 26.0, 56.0) / 255.0;
 
 vec3 getLavaDisp(vec3 pt, inout worleyResult worley) {
     vec3 lavaDir = worley.normClosest0;
-    // compute distance from border
-    // 1 - 0 makes it point in the direction we want for normal
-    vec3 diff = worley.normClosest1 - worley.normClosest0;
-    vec3 borderNormal = normalize(diff);
-    vec3 toClosest = pt - worley.normClosest0;
-    float distFromClosest = abs(dot(toClosest, borderNormal));
-    float distToBorder = 0.5 * length(diff) - distFromClosest;
-    float dist = distToBorder;// distance(pt, bldgDir);
-    float projLen = dot(lavaDir, pt);
-    // determines whether we are "on" the building
-    float s = (dist > lavaRadius ? 1.0 : 0.0);
     float rawDist = distance(normalize(pt), worley.normClosest0);
     // compute plume going up
     float plumeDist = clamp(0.0, PI, rawDist * 20.0);
-    s = pow(cos(plumeDist) * 0.5 + 0.5, 2.5);
-    //s = mix(0.0, s, cos(u_Time * 0.001 + random3(worley.normClosest0).x) * 0.5 + 0.5);
-    float plumeUp = s;
+    float plumeUp = pow(cos(plumeDist) * 0.5 + 0.5, 2.5);
     // compute plume going down
     plumeDist = clamp(PI, 2.0 * PI, rawDist * 20.0);
-    s = pow(cos(plumeDist - PI) * 0.5 + 0.5, 0.8) * 0.367;
-    //s = mix(0.0, s, cos(u_Time * 0.001 + random3(worley.normClosest0).x) * 0.5 + 0.5);
-    float plumeDown = s;
+    float plumeDown = pow(cos(plumeDist - PI) * 0.5 + 0.5, 0.8) * 0.367;
     // mix plumeUp, plumeDown, and 0 to achieve animation???
     float adjTime = u_Time * 0.001;
-    float rand = random3(worley.normClosest0).x * 5.0;
+    vec3 rand3 = random3(worley.normClosest0);
+    float rand = rand3.x * 5.0;
+    float heightModifier = mix(1.0, 1.4, rand3.y);
+    plumeUp *= heightModifier;
+    plumeDown *= heightModifier;
     float time = cos(adjTime + rand) * 0.5 + 0.5;
     // use derivative to make time always increase
     time *= sin(adjTime + rand) > 0.0 ? 0.0 : 1.0;
     const float STEP0 = 0.433;
     const float STEP1 = 0.667;
+    float s;
     s = time < STEP0 ? mix(0.0, plumeDown, smoothstep(0.0, STEP0, time)) :
         time < STEP1 ? mix(plumeDown, plumeUp, smoothstep(STEP0, STEP1, time)) :
                        mix(plumeUp, 0.0, smoothstep(STEP1, 1.0, time));
@@ -323,7 +313,7 @@ vec3 getLavaDisp(vec3 pt, inout worleyResult worley) {
     vec3 edgeColor = mix(LAVA_ORANGE, LAVA_BRIGHT_ORANGE, cos(u_Time * 0.001) * 0.5 + 0.5);
     vec3 faceColor = mix(LAVA_BRIGHT_RED, LAVA_RED, cos(u_Time * 0.001) * 0.5 + 0.5);
 
-    return s * normalize(pt) * 0.41;
+    return s * normalize(pt) * 0.81;
 }
 /* Recursive Perlin Noise */
 float getRecursivePerlin(vec3 pt, float freq) {
@@ -359,7 +349,8 @@ void main()
     const float EPSILON = 0.001;
     const float BLDG_EPSILON = 0.1;
     float time = u_Speed * u_Time * 0.0001;
-    worleyResult worley = getWorley(vs_Pos.xyz, 0.85, -1.0);
+    float plumeWorleySize = mix(0.85, 0.35, u_PlumeBias);
+    worleyResult worley = getWorley(vs_Pos.xyz, plumeWorleySize, -1.0);
     worleyResult worleyTime = getWorley(vs_Pos.xyz, 0.9, 1.0);
     vec4 bldgDisp = vec4(getLavaDisp(vs_Pos.xyz, worley), 0.0);
     if (length(bldgDisp) < EPSILON) {
@@ -367,7 +358,8 @@ void main()
     }
     fs_Col = vec4(getSmoothRandom3(worley.closest0), 1.0);
     float f = getFBM(worleyTime.closest0, 0.15);
-    f = smoothstep(0.35, 0.6, f);
+    float lavaBias = mix(0.36, 0.9, u_LavaBias);
+    f = smoothstep(0.35, lavaBias, f);
     //f = pow(f, 3.0) * 1.5;
     //f = f > 0.3 ? (f * 1.5) : f;
     //f = clamp(0.25, 0.75, f) * 2.0 - 0.5;
@@ -440,7 +432,7 @@ void main()
     fs_Nor = vec4(invTranspose * localNor, 0);
 
     fs_Shininess = mix(5.0, 50.0, smoothstep(0.31, 0.33, xzAngle));
-    fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
+    fs_LightVec = vec4(u_LightPos - modelposition.xyz, 0.0);  // Compute the direction in which the light source lies
 
     gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is
                                              // used to render the final positions of the geometry's vertices
